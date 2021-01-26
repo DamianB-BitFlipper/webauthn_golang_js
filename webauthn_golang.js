@@ -18,26 +18,6 @@ function b64enc(buf) {
                    .replace(/=/g, "");
 }
 
-// TODO: If this function are not used, remove them
-//
-// eslint-disable-next-line
-function b64RawEnc(buf) {
-    return base64js.fromByteArray(buf)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-}
-
-// TODO: If this function are not used, remove them
-//
-// eslint-disable-next-line
-function hexEncode(buf) {
-    return Array.from(buf)
-                .map(function(x) {
-                    return ("0" + x.toString(16)).substr(-2);
-				})
-                .join("");
-}
-
 // https://stackoverflow.com/questions/10730362/get-cookie-by-name
 function getCookie(name) {
     var nameEQ = name + "=";
