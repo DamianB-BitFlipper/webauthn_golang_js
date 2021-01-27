@@ -79,18 +79,9 @@ const registrationBegin_FormField = async (form_id, field_name) => {
     return credentialCreateOptionsFromServer
 }
 
-const registrationFinish_URL = async (credentialCreateOptionsFromServer, finish_url, form_id) => {
+const getNewAssertionForServer = async (credentialCreateOptionsFromServer) => {
     if (!credentialCreateOptionsFromServer) {
         throw new Error("Webauthn registration requires creation options from server");
-    }
-
-    let formData;
-    if (form_id !== null) {
-        // Gather the data in the form
-        const form = document.querySelector(form_id);
-        formData = new FormData(form);
-    } else {
-        formData = new FormData();
     }
 
     // Convert certain members of the PublicKeyCredentialCreateOptions into
@@ -107,12 +98,39 @@ const registrationFinish_URL = async (credentialCreateOptionsFromServer, finish_
     // in the credential into strings, for posting to our server.
     const newAssertionForServer = transformNewAssertionForServer(credential);
 
+    return newAssertionForServer
+}
+
+const registrationFinish_URL = async (credentialCreateOptionsFromServer, finish_url, form_id) => {
+    let formData;
+    if (form_id !== null) {
+        // Gather the data in the form
+        const form = document.querySelector(form_id);
+        formData = new FormData(form);
+    } else {
+        formData = new FormData();
+    }
+
+    // Get the new assertion data for the server
+    const newAssertionForServer = await getNewAssertionForServer(credentialCreateOptionsFromServer);
+
     // POST the transformed credential data to the server for validation
     // and storing the public key
     const response = await postNewAssertionToServer(formData, newAssertionForServer, finish_url);
 
     // Go to the url in the `response`
     window.location.assign(response.url);
+}
+
+const registrationFinish_PostFn = async (credentialCreateOptionsFromServer, post_fn) => {
+    // Get the new assertion data for the server
+    const newAssertionForServer = await getNewAssertionForServer(credentialCreateOptionsFromServer);
+
+    // Use the `post_fn` to send over the `newAssertionForServer`
+    const response = await post_fn(JSON.stringify(newAssertionForServer));
+
+    // Go to the url in the `response`
+    window.location.assign(response.redirectTo);
 }
 
 /**
@@ -354,5 +372,16 @@ const postAssertionToServer = async (assertionDataForServer, finish_url, formDat
 }
 
 // Export the various functions of this module
-export { registrationBegin_URL, registrationBegin_Cookie, registrationBegin_FormField, registrationFinish_URL };
-export { attestationBegin_URL, attestationBegin_Cookie, attestationBegin_FormField, attestationFinish_URL };
+export { 
+    // Registration functions
+    registrationBegin_URL, 
+    registrationBegin_Cookie, 
+    registrationBegin_FormField, 
+    registrationFinish_URL, 
+    registrationFinish_PostFn,
+    // Attestation functions
+    attestationBegin_URL, 
+    attestationBegin_Cookie, 
+    attestationBegin_FormField, 
+    attestationFinish_URL 
+};
