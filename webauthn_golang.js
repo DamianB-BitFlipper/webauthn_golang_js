@@ -119,7 +119,7 @@ const registrationFinish_URL = async (credentialCreateOptionsFromServer, finish_
     const response = await postNewAssertionToServer(formData, newAssertionForServer, finish_url);
 
     // Go to the url in the `response`
-    window.location.assign(response.url);
+    window.location.assign(response.redirectTo);
 }
 
 const registrationFinish_PostFn = async (credentialCreateOptionsFromServer, post_fn) => {
@@ -252,17 +252,9 @@ const attestationBegin_FormField = async (form_id, field_name) => {
     return credentialRequestOptionsFromServer
 }
 
-const attestationFinish_URL = async (credentialRequestOptionsFromServer, finish_url, form_id) => {
-    let formData;
-    if (form_id !== null) {
-        // Gather the data in the form
-        const form = document.querySelector(form_id);
-        formData = new FormData(form);
-    } else {
-        formData = new FormData();
-    }
+const getTransformedAssertionForServer = async (credentialRequestOptionsFromServer) => {
+    let transformedAssertionForServer;
 
-    let response;
     // Webauthn is enabled
     if (credentialRequestOptionsFromServer) {
         // Convert certain members of the PublicKeyCredentialRequestOptions into
@@ -278,17 +270,40 @@ const attestationFinish_URL = async (credentialRequestOptionsFromServer, finish_
 
         // We now have an authentication assertion! encode the byte arrays contained
         // in the assertion data as strings for posting to the server
-        const transformedAssertionForServer = transformAssertionForServer(assertion);
-
-        // POST the assertion to the server for verification.
-        response = await postAssertionToServer(transformedAssertionForServer, finish_url, formData);
+        transformedAssertionForServer = transformAssertionForServer(assertion);
     } else {
-        // Perform a non-Webauthn POST
-        response = await postAssertionToServer("", finish_url, formData);
+        //Webauthn is not enabled, so return an empty assertion
+        transformedAssertionForServer = "";
     }
 
+    return transformedAssertionForServer;
+}
+
+const attestationFinish_URL = async (credentialRequestOptionsFromServer, finish_url, form_id) => {
+    let formData;
+    if (form_id !== null) {
+        // Gather the data in the form
+        const form = document.querySelector(form_id);
+        formData = new FormData(form);
+    } else {
+        formData = new FormData();
+    }
+
+    const transformedAssertionForServer = await getTransformedAssertionForServer(credentialRequestOptionsFromServer);
+    const response = await postAssertionToServer(transformedAssertionForServer, finish_url, formData);
+
     // Go to the url in the `response`
-    window.location.assign(response.url);
+    window.location.assign(response.redirectTo);
+}
+
+const attestationFinish_PostFn = async (credentialRequestOptionsFromServer, post_fn) => {
+    // Get the transformed assertion data for the server
+    const transformedAssertionForServer = await getTransformedAssertionForServer(credentialRequestOptionsFromServer);
+
+    // Use the `post_fn` to send over the `transformedAssertionForServer`
+    const response = await post_fn(JSON.stringify(transformedAssertionForServer));
+
+    return response;
 }
 
 /**
@@ -383,5 +398,6 @@ export {
     attestationBegin_URL, 
     attestationBegin_Cookie, 
     attestationBegin_FormField, 
-    attestationFinish_URL 
+    attestationFinish_URL ,
+    attestationFinish_PostFn,
 };
