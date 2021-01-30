@@ -119,7 +119,9 @@ const registrationFinish_URL = async (credentialCreateOptionsFromServer, finish_
     const response = await postNewAssertionToServer(formData, newAssertionForServer, finish_url);
 
     // Go to the url in the `response`
-    window.location.assign(response.redirectTo);
+    if (response && response.redirectTo) {
+        window.location.assign(response.redirectTo);
+    }
 }
 
 const registrationFinish_PostFn = async (credentialCreateOptionsFromServer, post_fn) => {
@@ -130,7 +132,9 @@ const registrationFinish_PostFn = async (credentialCreateOptionsFromServer, post
     const response = await post_fn(JSON.stringify(newAssertionForServer));
 
     // Go to the url in the `response`
-    window.location.assign(response.redirectTo);
+    if (response && response.redirectTo) {
+        window.location.assign(response.redirectTo);
+    }
 }
 
 /**
