@@ -43,30 +43,25 @@ async function fetch_json(url, options) {
 }
 
 /**
- * REGISTRATION FUNCTIONS
+ * HELPER FUNCTIONS
  */
 
 /**
- * Callback after the registration form is submitted.
- * @param {Event} e 
+ * Get the webauthn options for this user from the server
+ * formData of the registration form
+ * @param {FormData} formData 
  */
-const registrationBegin_URL = async (form_id, begin_url) => {
-    // Gather the data in the form
-    const form = document.querySelector(form_id);
-    const formData = new FormData(form);
-
-    // POST the registration data to the server to retrieve the `PublicKeyCredentialCreateOptions`
-    const credentialCreateOptionsFromServer = await getCredentialCreateOptionsFromServer(formData, begin_url);
-    return credentialCreateOptionsFromServer;
+const getOptionsFromServer = async (formData, begin_url) => {
+    return await fetch_json(
+        begin_url,
+        {
+            method: "POST",
+            body: formData
+        }
+    );
 }
 
-const registrationBegin_Cookie = async (begin_src) => {
-    // TODO: Return `null` if cookie is not found
-    const credentialCreateOptionsFromServer = JSON.parse(decodeURIComponent(getCookie(begin_src)));
-    return credentialCreateOptionsFromServer
-}
-
-const registrationBegin_FormField = async (form_id, field_name) => {
+const retrieveWebauthnOptions_FormField = async (form_id, field_name) => {
     // Gather the data in the form
     const form = document.querySelector(form_id);
     const formData = new FormData(form);
@@ -75,9 +70,29 @@ const registrationBegin_FormField = async (form_id, field_name) => {
         return null;
     }
 
-    const credentialCreateOptionsFromServer = JSON.parse(formData.get(field_name));
-    return credentialCreateOptionsFromServer
+    const webauthn_options = JSON.parse(formData.get(field_name));
+    return webauthn_options;
 }
+
+const retrieveWebauthnOptions_URL = async (form_id, src_url) => {
+    // Gather the data in the form
+    const form = document.querySelector(form_id);
+    const formData = new FormData(form);
+
+    // POST the form data to the server to retrieve the `webauthn_options`
+    const webauthn_options = await getOptionsFromServer(formData, src_url);
+    return webauthn_options;
+}
+
+const retrieveWebauthnOptions_Cookie = async (src_cookie) => {
+    // TODO: Return `null` if cookie is not found
+    const webauthn_options = JSON.parse(decodeURIComponent(getCookie(src_cookie)));
+    return webauthn_options;
+}
+
+/**
+ * REGISTRATION FUNCTIONS
+ */
 
 const getNewAssertionForServer = async (credentialCreateOptionsFromServer) => {
     if (!credentialCreateOptionsFromServer) {
@@ -137,21 +152,6 @@ const registrationFinish_PostFn = async (credentialCreateOptionsFromServer, post
     }
 }
 
-/**
- * Get PublicKeyCredentialRequestOptions for this user from the server
- * formData of the registration form
- * @param {FormData} formData 
- */
-const getCredentialRequestOptionsFromServer = async (formData, begin_url) => {
-    return await fetch_json(
-        begin_url,
-        {
-            method: "POST",
-            body: formData
-        }
-    );
-}
-
 const transformCredentialRequestOptions = (credentialRequestOptionsFromServer) => {
     let {challenge, allowCredentials} = credentialRequestOptionsFromServer;
 
@@ -174,21 +174,6 @@ const transformCredentialRequestOptions = (credentialRequestOptionsFromServer) =
     return transformedCredentialRequestOptions;
 };
 
-
-/**
- * Get PublicKeyCredentialRequestOptions for this user from the server
- * formData of the registration form
- * @param {FormData} formData 
- */
-const getCredentialCreateOptionsFromServer = async (formData, begin_url) => {
-    return await fetch_json(
-        begin_url,
-        {
-            method: "POST",
-            body: formData
-        }
-    );
-}
 
 /**
  * Transforms items in the credentialCreateOptions generated on the server
@@ -221,40 +206,6 @@ const transformCredentialCreateOptions = (credentialCreateOptionsFromServer) => 
 /**
  * AUTHENTICATION FUNCTIONS
  */
-
-
-/**
- * Callback build blocks to be executed after submitting login form
- * @param {Event} e 
- */
-const attestationBegin_URL = async (form_id, begin_url) => {
-    // Gather the data in the form
-    const form = document.querySelector(form_id);
-    const formData = new FormData(form);
-
-    // POST the login data to the server to retrieve the `PublicKeyCredentialRequestOptions`
-    const credentialRequestOptionsFromServer = await getCredentialRequestOptionsFromServer(formData, begin_url);
-    return credentialRequestOptionsFromServer;
-}
-
-const attestationBegin_Cookie = async (begin_src) => {
-    // TODO: Return `null` if cookie is not found
-    const credentialRequestOptionsFromServer = JSON.parse(decodeURIComponent(getCookie(begin_src)));
-    return credentialRequestOptionsFromServer
-}
-
-const attestationBegin_FormField = async (form_id, field_name) => {
-    // Gather the data in the form
-    const form = document.querySelector(form_id);
-    const formData = new FormData(form);
-
-    if (formData.get(field_name) === "") {
-        return null;
-    }
-
-    const credentialRequestOptionsFromServer = JSON.parse(formData.get(field_name));
-    return credentialRequestOptionsFromServer
-}
 
 const getTransformedAssertionForServer = async (credentialRequestOptionsFromServer) => {
     let transformedAssertionForServer;
@@ -392,16 +343,16 @@ const postAssertionToServer = async (assertionDataForServer, finish_url, formDat
 
 // Export the various functions of this module
 export { 
+    // Helper functions
+    retrieveWebauthnOptions_FormField,
+    retrieveWebauthnOptions_URL,
+    retrieveWebauthnOptions_Cookie,
+
     // Registration functions
-    registrationBegin_URL, 
-    registrationBegin_Cookie, 
-    registrationBegin_FormField, 
     registrationFinish_URL, 
     registrationFinish_PostFn,
+
     // Attestation functions
-    attestationBegin_URL, 
-    attestationBegin_Cookie, 
-    attestationBegin_FormField, 
     attestationFinish_URL ,
     attestationFinish_PostFn,
 };
